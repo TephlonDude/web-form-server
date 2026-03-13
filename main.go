@@ -37,6 +37,7 @@ func main() {
 	mux.HandleFunc("GET /health", handleHealth)
 	mux.HandleFunc("GET /config", handleConfigPage)
 	mux.HandleFunc("GET /config/load", handleConfigLoad)
+	mux.HandleFunc("POST /config/validate", handleConfigValidate)
 	mux.HandleFunc("POST /config/save", handleConfigSave)
 
 	log.Printf("Web Form Server listening on :%s", port)

@@ -26,8 +26,11 @@ header a:hover{color:#fff}
 .editor-toolbar .file-path{flex:1;font-size:.8rem;color:#6b7280;font-family:monospace;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:.3rem .6rem}
 textarea#toml-editor{width:100%;height:520px;font-family:"Cascadia Code","Fira Code","Consolas",monospace;font-size:.85rem;line-height:1.6;border:1px solid #d1d5db;border-radius:6px;padding:.75rem;resize:vertical;color:#1a1a2e;background:#fafafa;tab-size:4}
 textarea#toml-editor:focus{outline:none;border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.12)}
-.status-bar{margin-top:.5rem;font-size:.8rem;min-height:1.25em}
+.status-bar{margin-top:.5rem;font-size:.8rem;min-height:1.25em;display:flex;align-items:baseline;gap:.75rem;flex-wrap:wrap}
+.status-detail{font-family:"Cascadia Code","Fira Code","Consolas",monospace;font-size:.78rem;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;padding:.4rem .7rem;margin-top:.4rem;width:100%;white-space:pre-wrap;display:none}
+.status-detail.visible{display:block}
 .status-ok{color:#059669}.status-err{color:#dc2626}.status-info{color:#6b7280}
+.btn-validate{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}.btn-validate:hover{background:#a7f3d0}
 
 /* Visual Builder */
 .builder-panel{display:grid;grid-template-columns:280px 1fr;min-height:580px}
@@ -118,11 +121,15 @@ textarea#toml-editor:focus{outline:none;border-color:#4f46e5;box-shadow:0 0 0 3p
     <div class="editor-panel">
       <div class="editor-toolbar">
         <span class="file-path">{{.FormFile}}</span>
+        <button class="btn btn-validate btn-sm" onclick="validateTOML()">&#10003; Validate</button>
         <button class="btn btn-secondary btn-sm" onclick="loadTOML()">&#8635; Reload from file</button>
         <button class="btn btn-primary btn-sm" onclick="saveTOML()">&#128190; Save to file</button>
       </div>
       <textarea id="toml-editor" spellcheck="false">{{.TOMLContent}}</textarea>
-      <div class="status-bar"><span id="editor-status" class="status-info">Ready.</span></div>
+      <div class="status-bar">
+        <span id="editor-status" class="status-info">Ready.</span>
+        <div id="editor-detail" class="status-detail"></div>
+      </div>
     </div>
   </div>
 
@@ -310,10 +317,22 @@ function switchTab(name) {
 }
 
 // ─── TOML Editor ─────────────────────────────────────────────────────────────
+async function validateTOML() {
+  setEditorStatus('Validating…','info');
+  const body = document.getElementById('toml-editor').value;
+  const r = await fetch('/config/validate', {method:'POST',headers:{'Content-Type':'text/plain'},body});
+  const json = await r.json();
+  if (!r.ok) {
+    setEditorStatus('&#10007; Invalid configuration','err', json.error);
+  } else {
+    setEditorStatus('&#10003; Configuration is valid','ok');
+  }
+}
+
 async function loadTOML() {
   setEditorStatus('Loading…','info');
   const r = await fetch('/config/load');
-  if (!r.ok) { setEditorStatus('Error loading file.','err'); return; }
+  if (!r.ok) { setEditorStatus('&#10007; Error loading file.','err'); return; }
   document.getElementById('toml-editor').value = await r.text();
   setEditorStatus('Loaded from file.','ok');
 }
@@ -323,14 +342,25 @@ async function saveTOML() {
   const body = document.getElementById('toml-editor').value;
   const r = await fetch('/config/save', {method:'POST',headers:{'Content-Type':'text/plain'},body});
   const json = await r.json();
-  if (!r.ok) { setEditorStatus('Error: '+json.error,'err'); return; }
-  setEditorStatus('Saved successfully.','ok');
+  if (!r.ok) {
+    setEditorStatus('&#10007; '+json.error,'err', json.error);
+    return;
+  }
+  setEditorStatus('&#10003; Saved successfully.','ok');
 }
 
-function setEditorStatus(msg, cls) {
+function setEditorStatus(msg, cls, detail) {
   const el = document.getElementById('editor-status');
-  el.textContent = msg;
+  el.innerHTML = msg;
   el.className = 'status-'+cls;
+  const det = document.getElementById('editor-detail');
+  if (detail) {
+    det.textContent = detail;
+    det.classList.add('visible');
+  } else {
+    det.textContent = '';
+    det.classList.remove('visible');
+  }
 }
 
 // ─── Builder helpers ──────────────────────────────────────────────────────────

@@ -38,6 +38,22 @@ func handleConfigLoad(w http.ResponseWriter, r *http.Request) {
 	w.Write(data) //nolint:errcheck
 }
 
+func handleConfigValidate(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "failed to read request body"})
+		return
+	}
+	defer r.Body.Close()
+
+	if _, err := loadFormFromString(string(body)); err != nil {
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "valid"})
+}
+
 func handleConfigSave(w http.ResponseWriter, r *http.Request) {
 	formFile := getEnv("FORM_FILE", "/web-config/form.toml")
 

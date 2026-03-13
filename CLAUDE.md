@@ -53,6 +53,7 @@ go vet ./...                      # Static analysis
 | `GET` | `/health` | Health check (used by Docker) |
 | `GET` | `/config` | Visual form builder + TOML editor |
 | `GET` | `/config/load` | Returns raw TOML file content |
+| `POST` | `/config/validate` | Validates TOML without writing (returns `{status:"valid"}` or `{error:"..."}`) |
 | `POST` | `/config/save` | Validates and writes TOML file |
 
 ### Environment Variables
