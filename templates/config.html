@@ -1,0 +1,948 @@
+{{define "config.html"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Form Configuration</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh}
+header{background:#1a1a2e;color:#fff;padding:1rem 1.5rem;display:flex;align-items:center;gap:1rem}
+header h1{font-size:1.25rem;font-weight:600}
+header a{color:#a0aec0;text-decoration:none;font-size:.875rem}
+header a:hover{color:#fff}
+.container{max-width:1400px;margin:0 auto;padding:1.5rem}
+
+/* Tabs */
+.tabs{display:flex;gap:.25rem;margin-bottom:1rem}
+.tab-btn{padding:.6rem 1.25rem;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-size:.9rem;font-weight:500;background:#d1d5db;color:#4b5563;transition:background .15s,color .15s}
+.tab-btn.active{background:#fff;color:#1a1a2e}
+.tab-panel{display:none;background:#fff;border-radius:0 6px 6px 6px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.tab-panel.active{display:block}
+
+/* TOML Editor */
+.editor-panel{padding:1rem}
+.editor-toolbar{display:flex;gap:.5rem;align-items:center;margin-bottom:.75rem;flex-wrap:wrap}
+.editor-toolbar .file-path{flex:1;font-size:.8rem;color:#6b7280;font-family:monospace;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:.3rem .6rem}
+textarea#toml-editor{width:100%;height:520px;font-family:"Cascadia Code","Fira Code","Consolas",monospace;font-size:.85rem;line-height:1.6;border:1px solid #d1d5db;border-radius:6px;padding:.75rem;resize:vertical;color:#1a1a2e;background:#fafafa;tab-size:4}
+textarea#toml-editor:focus{outline:none;border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.12)}
+.status-bar{margin-top:.5rem;font-size:.8rem;min-height:1.25em}
+.status-ok{color:#059669}.status-err{color:#dc2626}.status-info{color:#6b7280}
+
+/* Visual Builder */
+.builder-panel{display:grid;grid-template-columns:280px 1fr;min-height:580px}
+.tree-col{border-right:1px solid #e5e7eb;padding:1rem;overflow-y:auto}
+.tree-col h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;margin-bottom:.75rem}
+.editor-col{padding:1rem;overflow-y:auto}
+
+/* Form meta */
+.form-meta{background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:1rem;margin-bottom:1rem}
+.form-meta h3{font-size:.85rem;font-weight:600;margin-bottom:.75rem;color:#374151}
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+
+/* Tree */
+.tree-node{border-radius:4px;cursor:pointer;margin-bottom:2px}
+.tree-node-header{display:flex;align-items:center;gap:.4rem;padding:.35rem .5rem;border-radius:4px}
+.tree-node-header:hover{background:#f3f4f6}
+.tree-node-header.selected{background:#ede9fe;color:#4f46e5}
+.tree-icon{font-size:.7rem;color:#9ca3af;width:12px;flex-shrink:0}
+.tree-label{flex:1;font-size:.83rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree-del{opacity:0;font-size:.75rem;color:#9ca3af;background:none;border:none;cursor:pointer;padding:1px 4px;border-radius:3px;line-height:1}
+.tree-node-header:hover .tree-del{opacity:1}
+.tree-del:hover{color:#dc2626;background:#fee2e2}
+.tree-children{padding-left:1rem}
+
+/* Editor panes */
+.editor-pane{display:none}
+.editor-pane.active{display:block}
+.pane-title{font-size:.95rem;font-weight:600;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #e5e7eb}
+
+/* Form controls */
+.field-row{display:grid;grid-template-columns:140px 1fr;gap:.5rem;align-items:start;margin-bottom:.5rem}
+.field-row label{font-size:.83rem;color:#374151;padding-top:.45rem;font-weight:500}
+.field-row input[type=text],.field-row input[type=number],.field-row select,.field-row textarea{width:100%;padding:.4rem .6rem;border:1px solid #d1d5db;border-radius:4px;font-size:.85rem;color:#1a1a2e;background:#fff}
+.field-row input[type=text]:focus,.field-row input[type=number]:focus,.field-row select:focus,.field-row textarea:focus{outline:none;border-color:#4f46e5;box-shadow:0 0 0 2px rgba(79,70,229,.1)}
+.field-row input[type=checkbox]{width:16px;height:16px;margin-top:.5rem;accent-color:#4f46e5}
+.field-row textarea{resize:vertical;min-height:60px}
+.field-row-hint{font-size:.75rem;color:#9ca3af;margin-top:.2rem}
+
+/* Options table */
+.options-block{margin-top:.75rem}
+.options-block h4{font-size:.82rem;font-weight:600;color:#374151;margin-bottom:.5rem}
+.options-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.options-table th{text-align:left;padding:.3rem .5rem;border-bottom:1px solid #e5e7eb;color:#6b7280;font-weight:500}
+.options-table td{padding:.3rem .4rem;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+.options-table input[type=text]{width:100%;padding:.25rem .4rem;border:1px solid #d1d5db;border-radius:3px;font-size:.82rem}
+.options-table input[type=checkbox]{accent-color:#4f46e5}
+.opt-del{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:.85rem;padding:2px 6px;border-radius:3px}
+.opt-del:hover{color:#dc2626;background:#fee2e2}
+
+/* Add buttons */
+.add-btn{display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .85rem;border:1.5px dashed #d1d5db;border-radius:5px;background:none;cursor:pointer;font-size:.82rem;color:#6b7280;transition:all .15s;margin-top:.4rem}
+.add-btn:hover{border-color:#4f46e5;color:#4f46e5;background:#f5f3ff}
+.btn{display:inline-flex;align-items:center;gap:.35rem;padding:.45rem 1rem;border:none;border-radius:5px;cursor:pointer;font-size:.85rem;font-weight:500;transition:all .15s}
+.btn-primary{background:#4f46e5;color:#fff}.btn-primary:hover{background:#4338ca}
+.btn-secondary{background:#e5e7eb;color:#374151}.btn-secondary:hover{background:#d1d5db}
+.btn-danger{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5}.btn-danger:hover{background:#fecaca}
+.btn-sm{padding:.3rem .7rem;font-size:.8rem}
+.btn-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem;padding-top:.75rem;border-top:1px solid #f3f4f6}
+
+.placeholder-msg{color:#9ca3af;font-size:.9rem;padding:2rem;text-align:center}
+
+/* Apply bar */
+.apply-bar{background:#f9fafb;border-top:1px solid #e5e7eb;padding:.75rem 1rem;display:flex;align-items:center;gap:.75rem}
+.apply-bar .apply-status{flex:1;font-size:.82rem}
+
+/* Responsive */
+@media(max-width:680px){
+  .builder-panel{grid-template-columns:1fr}
+  .tree-col{border-right:none;border-bottom:1px solid #e5e7eb}
+  .meta-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>&#9881; Form Configuration</h1>
+  <a href="/">&#8592; View Form</a>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('editor')">TOML Editor</button>
+    <button class="tab-btn" onclick="switchTab('builder')">Visual Builder</button>
+  </div>
+
+  <!-- ── Tab 1: TOML Editor ─────────────────────────────────────────────── -->
+  <div id="tab-editor" class="tab-panel active">
+    <div class="editor-panel">
+      <div class="editor-toolbar">
+        <span class="file-path">{{.FormFile}}</span>
+        <button class="btn btn-secondary btn-sm" onclick="loadTOML()">&#8635; Reload from file</button>
+        <button class="btn btn-primary btn-sm" onclick="saveTOML()">&#128190; Save to file</button>
+      </div>
+      <textarea id="toml-editor" spellcheck="false">{{.TOMLContent}}</textarea>
+      <div class="status-bar"><span id="editor-status" class="status-info">Ready.</span></div>
+    </div>
+  </div>
+
+  <!-- ── Tab 2: Visual Builder ─────────────────────────────────────────── -->
+  <div id="tab-builder" class="tab-panel">
+    <div class="builder-panel">
+
+      <!-- Left: tree -->
+      <div class="tree-col">
+        <h3>Structure</h3>
+        <div id="form-tree"></div>
+        <div style="margin-top:1rem;display:flex;flex-direction:column;gap:.4rem">
+          <button class="add-btn" onclick="addPage()">&#43; Add Page</button>
+          <button class="add-btn" onclick="addFlatSection()">&#43; Add Section (flat)</button>
+        </div>
+      </div>
+
+      <!-- Right: editor panes -->
+      <div class="editor-col">
+
+        <!-- Form meta editor -->
+        <div id="pane-meta" class="editor-pane active">
+          <div class="pane-title">Form Settings</div>
+          <div class="form-meta">
+            <div class="meta-grid">
+              <div>
+                <div class="field-row"><label>Title*</label><input type="text" id="m-title" oninput="metaChanged()"></div>
+                <div class="field-row"><label>Description</label><input type="text" id="m-desc" oninput="metaChanged()"></div>
+                <div class="field-row"><label>Submit Label</label><input type="text" id="m-submit" placeholder="Submit" oninput="metaChanged()"></div>
+                <div class="field-row"><label>Reset Label</label><input type="text" id="m-reset" placeholder="(none)" oninput="metaChanged()"></div>
+              </div>
+              <div>
+                <div class="field-row"><label>Action</label><input type="text" id="m-action" placeholder="/submit" oninput="metaChanged()"></div>
+                <div class="field-row"><label>Method</label>
+                  <select id="m-method" onchange="metaChanged()">
+                    <option value="post">post</option>
+                    <option value="get">get</option>
+                  </select>
+                </div>
+                <div class="field-row"><label>Enctype</label>
+                  <select id="m-enctype" onchange="metaChanged()">
+                    <option value="">default</option>
+                    <option value="multipart/form-data">multipart/form-data</option>
+                    <option value="application/x-www-form-urlencoded">application/x-www-form-urlencoded</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="status-info" style="font-size:.82rem">Select a page, section, or field in the tree to edit it, or click "Add Page" / "Add Section" below the tree.</p>
+        </div>
+
+        <!-- Page editor -->
+        <div id="pane-page" class="editor-pane">
+          <div class="pane-title">Page</div>
+          <div class="field-row"><label>ID*</label><input type="text" id="p-id" oninput="pageChanged()"></div>
+          <div class="field-row"><label>Title</label><input type="text" id="p-title" oninput="pageChanged()"></div>
+          <div class="field-row"><label>Description</label><input type="text" id="p-desc" oninput="pageChanged()"></div>
+          <div class="btn-row">
+            <button class="add-btn" onclick="addSectionToPage()">&#43; Add Section</button>
+            <button class="btn btn-danger btn-sm" onclick="deletePage()">&#128465; Delete Page</button>
+          </div>
+        </div>
+
+        <!-- Section editor -->
+        <div id="pane-section" class="editor-pane">
+          <div class="pane-title">Section</div>
+          <div class="field-row"><label>ID*</label><input type="text" id="s-id" oninput="sectionChanged()"></div>
+          <div class="field-row"><label>Title</label><input type="text" id="s-title" oninput="sectionChanged()"></div>
+          <div class="field-row"><label>Description</label><input type="text" id="s-desc" oninput="sectionChanged()"></div>
+          <div class="btn-row">
+            <button class="add-btn" onclick="addFieldToSection()">&#43; Add Field</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteSection()">&#128465; Delete Section</button>
+          </div>
+        </div>
+
+        <!-- Field editor -->
+        <div id="pane-field" class="editor-pane">
+          <div class="pane-title">Field</div>
+          <div class="field-row"><label>ID*</label><input type="text" id="f-id" oninput="fieldChanged('id',this.value)"></div>
+          <div class="field-row"><label>Type*</label>
+            <select id="f-type" onchange="fieldTypeChanged()">
+              <optgroup label="Text">
+                <option value="text">text</option>
+                <option value="password">password</option>
+                <option value="email">email</option>
+                <option value="url">url</option>
+                <option value="tel">tel</option>
+                <option value="search">search</option>
+              </optgroup>
+              <optgroup label="Numeric">
+                <option value="number">number</option>
+                <option value="range">range</option>
+              </optgroup>
+              <optgroup label="Date/Time">
+                <option value="date">date</option>
+                <option value="time">time</option>
+                <option value="datetime-local">datetime-local</option>
+                <option value="month">month</option>
+                <option value="week">week</option>
+              </optgroup>
+              <optgroup label="Choice">
+                <option value="select">select</option>
+                <option value="radio">radio</option>
+                <option value="checkbox">checkbox</option>
+                <option value="checkbox_group">checkbox_group</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option value="color">color</option>
+                <option value="textarea">textarea</option>
+                <option value="file">file</option>
+                <option value="hidden">hidden</option>
+                <option value="button">button</option>
+              </optgroup>
+            </select>
+          </div>
+          <div id="f-label-row" class="field-row"><label>Label*</label><input type="text" id="f-label" oninput="fieldChanged('label',this.value)"></div>
+          <div id="f-required-row" class="field-row"><label>Required</label><input type="checkbox" id="f-required" onchange="fieldChanged('required',this.checked)"></div>
+          <div id="f-disabled-row" class="field-row"><label>Disabled</label><input type="checkbox" id="f-disabled" onchange="fieldChanged('disabled',this.checked)"></div>
+          <div id="f-readonly-row" class="field-row"><label>Readonly</label><input type="checkbox" id="f-readonly" onchange="fieldChanged('readonly',this.checked)"></div>
+          <div id="f-placeholder-row" class="field-row"><label>Placeholder</label><input type="text" id="f-placeholder" oninput="fieldChanged('placeholder',this.value)"></div>
+          <div id="f-value-row" class="field-row"><label>Default Value</label><input type="text" id="f-value" oninput="fieldChanged('value',this.value)"></div>
+          <div id="f-pattern-row" class="field-row"><label>Pattern</label><input type="text" id="f-pattern" oninput="fieldChanged('pattern',this.value)"></div>
+          <div id="f-minlength-row" class="field-row"><label>Min Length</label><input type="number" id="f-minlength" min="0" oninput="fieldChanged('minlength',this.value)"></div>
+          <div id="f-maxlength-row" class="field-row"><label>Max Length</label><input type="number" id="f-maxlength" min="0" oninput="fieldChanged('maxlength',this.value)"></div>
+          <div id="f-min-row" class="field-row"><label>Min</label><input type="text" id="f-min" oninput="fieldChanged('min',this.value)"></div>
+          <div id="f-max-row" class="field-row"><label>Max</label><input type="text" id="f-max" oninput="fieldChanged('max',this.value)"></div>
+          <div id="f-step-row" class="field-row"><label>Step</label><input type="text" id="f-step" oninput="fieldChanged('step',this.value)"></div>
+          <div id="f-rows-row" class="field-row"><label>Rows</label><input type="number" id="f-rows" min="1" oninput="fieldChanged('rows',this.value)"></div>
+          <div id="f-cols-row" class="field-row"><label>Cols</label><input type="number" id="f-cols" min="1" oninput="fieldChanged('cols',this.value)"></div>
+          <div id="f-accept-row" class="field-row"><label>Accept</label><input type="text" id="f-accept" placeholder=".pdf,.docx,image/*" oninput="fieldChanged('accept',this.value)"></div>
+          <div id="f-multiple-row" class="field-row"><label>Multiple</label><input type="checkbox" id="f-multiple" onchange="fieldChanged('multiple',this.checked)"></div>
+          <div id="f-size-row" class="field-row"><label>Size (rows)</label><input type="number" id="f-size" min="1" oninput="fieldChanged('size',this.value)"></div>
+          <div id="f-checked-row" class="field-row"><label>Checked</label><input type="checkbox" id="f-checked" onchange="fieldChanged('checked',this.checked)"></div>
+          <div id="f-autocomplete-row" class="field-row"><label>Autocomplete</label><input type="text" id="f-autocomplete" placeholder="name, email, off…" oninput="fieldChanged('autocomplete',this.value)"></div>
+          <div id="f-css-row" class="field-row"><label>CSS Class</label><input type="text" id="f-css" oninput="fieldChanged('css_class',this.value)"></div>
+
+          <!-- Options editor (select / radio / checkbox_group) -->
+          <div id="f-options-block" class="options-block" style="display:none">
+            <h4>Options</h4>
+            <table class="options-table">
+              <thead><tr><th>Label</th><th>Value</th><th>Default</th><th>Disabled</th><th></th></tr></thead>
+              <tbody id="options-tbody"></tbody>
+            </table>
+            <button class="add-btn" style="margin-top:.4rem" onclick="addOption()">&#43; Add Option</button>
+            <div id="f-placeholder-opt-row" style="margin-top:.5rem" class="field-row">
+              <label>Placeholder</label>
+              <input type="text" id="f-placeholder-opt" placeholder="-- Select --" oninput="fieldChanged('placeholder',this.value)">
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-danger btn-sm" onclick="deleteField()">&#128465; Delete Field</button>
+          </div>
+        </div>
+
+      </div><!-- /editor-col -->
+    </div><!-- /builder-panel -->
+
+    <div class="apply-bar">
+      <span class="apply-status status-info" id="builder-status">Edit the form using the tree on the left, then apply to sync to the TOML editor.</span>
+      <button class="btn btn-primary" onclick="applyToEditor()">&#8596; Apply to TOML Editor</button>
+      <button class="btn btn-secondary" onclick="loadIntoBuilder()">&#8635; Load from TOML Editor</button>
+    </div>
+  </div><!-- /tab-builder -->
+</div><!-- /container -->
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+const state = {
+  meta: { title:'', description:'', action:'/submit', method:'post', enctype:'', submit_label:'', reset_label:'' },
+  mode: 'paged', // 'paged' | 'flat'
+  pages: [],     // [{id,title,description,sections:[{id,title,description,fields:[...]}]}]
+  sections: [],  // flat mode
+};
+
+// selection: {type:'page'|'section'|'field', pageIdx, sectionIdx, fieldIdx}
+let sel = null;
+
+// ─── Tab switching ────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',['editor','builder'][i]===name));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ─── TOML Editor ─────────────────────────────────────────────────────────────
+async function loadTOML() {
+  setEditorStatus('Loading…','info');
+  const r = await fetch('/config/load');
+  if (!r.ok) { setEditorStatus('Error loading file.','err'); return; }
+  document.getElementById('toml-editor').value = await r.text();
+  setEditorStatus('Loaded from file.','ok');
+}
+
+async function saveTOML() {
+  setEditorStatus('Saving…','info');
+  const body = document.getElementById('toml-editor').value;
+  const r = await fetch('/config/save', {method:'POST',headers:{'Content-Type':'text/plain'},body});
+  const json = await r.json();
+  if (!r.ok) { setEditorStatus('Error: '+json.error,'err'); return; }
+  setEditorStatus('Saved successfully.','ok');
+}
+
+function setEditorStatus(msg, cls) {
+  const el = document.getElementById('editor-status');
+  el.textContent = msg;
+  el.className = 'status-'+cls;
+}
+
+// ─── Builder helpers ──────────────────────────────────────────────────────────
+function getSections() {
+  if (state.mode === 'flat') return state.sections;
+  if (sel && sel.type !== 'page') {
+    const page = state.pages[sel.pageIdx];
+    return page ? page.sections : [];
+  }
+  return [];
+}
+
+function selectedPage() { return sel && sel.pageIdx != null ? state.pages[sel.pageIdx] : null; }
+function selectedSection() {
+  if (!sel || sel.sectionIdx == null) return null;
+  if (state.mode === 'flat') return state.sections[sel.sectionIdx];
+  const p = selectedPage();
+  return p ? p.sections[sel.sectionIdx] : null;
+}
+function selectedField() {
+  if (!sel || sel.fieldIdx == null) return null;
+  const s = selectedSection();
+  return s ? s.fields[sel.fieldIdx] : null;
+}
+
+function uid() { return 'id_'+Math.random().toString(36).slice(2,8); }
+
+// ─── Tree rendering ───────────────────────────────────────────────────────────
+function renderTree() {
+  const root = document.getElementById('form-tree');
+  root.innerHTML = '';
+
+  if (state.mode === 'paged') {
+    state.pages.forEach((page, pi) => {
+      const node = makeNode('&#128196; '+page.title, 'page', pi, null, null, () => selectPage(pi), () => deletePage(pi));
+      const children = document.createElement('div');
+      children.className = 'tree-children';
+      page.sections.forEach((sec, si) => {
+        const snode = makeNode('&#8801; '+sec.title, 'section', pi, si, null, () => selectSection(pi, si), () => deleteSectionAt(pi, si));
+        const fchildren = document.createElement('div');
+        fchildren.className = 'tree-children';
+        sec.fields.forEach((f, fi) => {
+          const fnode = makeNode('&#9632; '+f.label+(f.type==='hidden'?' [hidden]':''), 'field', pi, si, fi, () => selectField(pi, si, fi), () => deleteFieldAt(pi, si, fi));
+          fchildren.appendChild(fnode);
+        });
+        snode.appendChild(fchildren);
+        children.appendChild(snode);
+      });
+      node.appendChild(children);
+      root.appendChild(node);
+    });
+  } else {
+    state.sections.forEach((sec, si) => {
+      const snode = makeNode('&#8801; '+sec.title, 'section', null, si, null, () => selectSection(null, si), () => deleteSectionAt(null, si));
+      const fchildren = document.createElement('div');
+      fchildren.className = 'tree-children';
+      sec.fields.forEach((f, fi) => {
+        const fnode = makeNode('&#9632; '+(f.label||f.id)+(f.type==='hidden'?' [hidden]':''), 'field', null, si, fi, () => selectField(null, si, fi), () => deleteFieldAt(null, si, fi));
+        fchildren.appendChild(fnode);
+      });
+      snode.appendChild(fchildren);
+      root.appendChild(snode);
+    });
+  }
+}
+
+function makeNode(label, type, pi, si, fi, onSelect, onDelete) {
+  const div = document.createElement('div');
+  div.className = 'tree-node';
+  const hdr = document.createElement('div');
+  hdr.className = 'tree-node-header';
+  hdr.innerHTML = `<span class="tree-label">${label}</span>`;
+
+  // highlight selection
+  const isSelected = sel &&
+    sel.type === type &&
+    (type==='page' ? sel.pageIdx===pi :
+     type==='section' ? sel.pageIdx===pi && sel.sectionIdx===si :
+     sel.pageIdx===pi && sel.sectionIdx===si && sel.fieldIdx===fi);
+  if (isSelected) hdr.classList.add('selected');
+
+  hdr.addEventListener('click', e => { e.stopPropagation(); onSelect(); });
+
+  const del = document.createElement('button');
+  del.className = 'tree-del';
+  del.textContent = '✕';
+  del.title = 'Delete';
+  del.addEventListener('click', e => { e.stopPropagation(); onDelete(); });
+  hdr.appendChild(del);
+  div.appendChild(hdr);
+  return div;
+}
+
+// ─── Selection ────────────────────────────────────────────────────────────────
+function selectMeta() { sel = null; showPane('meta'); renderTree(); }
+function selectPage(pi) { sel = {type:'page', pageIdx:pi}; loadPagePane(); showPane('page'); renderTree(); }
+function selectSection(pi, si) { sel = {type:'section', pageIdx:pi, sectionIdx:si}; loadSectionPane(); showPane('section'); renderTree(); }
+function selectField(pi, si, fi) { sel = {type:'field', pageIdx:pi, sectionIdx:si, fieldIdx:fi}; loadFieldPane(); showPane('field'); renderTree(); }
+
+function showPane(name) {
+  document.querySelectorAll('.editor-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('pane-'+name).classList.add('active');
+}
+
+// ─── Meta pane ────────────────────────────────────────────────────────────────
+function loadMetaPane() {
+  document.getElementById('m-title').value = state.meta.title;
+  document.getElementById('m-desc').value = state.meta.description;
+  document.getElementById('m-submit').value = state.meta.submit_label;
+  document.getElementById('m-reset').value = state.meta.reset_label;
+  document.getElementById('m-action').value = state.meta.action;
+  document.getElementById('m-method').value = state.meta.method || 'post';
+  document.getElementById('m-enctype').value = state.meta.enctype || '';
+}
+
+function metaChanged() {
+  state.meta.title = document.getElementById('m-title').value;
+  state.meta.description = document.getElementById('m-desc').value;
+  state.meta.submit_label = document.getElementById('m-submit').value;
+  state.meta.reset_label = document.getElementById('m-reset').value;
+  state.meta.action = document.getElementById('m-action').value;
+  state.meta.method = document.getElementById('m-method').value;
+  state.meta.enctype = document.getElementById('m-enctype').value;
+}
+
+// ─── Page pane ────────────────────────────────────────────────────────────────
+function loadPagePane() {
+  const page = selectedPage();
+  if (!page) return;
+  document.getElementById('p-id').value = page.id;
+  document.getElementById('p-title').value = page.title;
+  document.getElementById('p-desc').value = page.description || '';
+}
+
+function pageChanged() {
+  const page = selectedPage();
+  if (!page) return;
+  page.id = document.getElementById('p-id').value;
+  page.title = document.getElementById('p-title').value;
+  page.description = document.getElementById('p-desc').value;
+  renderTree();
+}
+
+// ─── Section pane ─────────────────────────────────────────────────────────────
+function loadSectionPane() {
+  const sec = selectedSection();
+  if (!sec) return;
+  document.getElementById('s-id').value = sec.id;
+  document.getElementById('s-title').value = sec.title;
+  document.getElementById('s-desc').value = sec.description || '';
+}
+
+function sectionChanged() {
+  const sec = selectedSection();
+  if (!sec) return;
+  sec.id = document.getElementById('s-id').value;
+  sec.title = document.getElementById('s-title').value;
+  sec.description = document.getElementById('s-desc').value;
+  renderTree();
+}
+
+// ─── Field pane ───────────────────────────────────────────────────────────────
+const FIELD_DEFAULTS = { id:'', type:'text', label:'', required:false, disabled:false, readonly:false,
+  value:'', placeholder:'', pattern:'', minlength:'', maxlength:'', min:'', max:'', step:'',
+  rows:'', cols:'', accept:'', multiple:false, size:'', checked:false, autocomplete:'', css_class:'', options:[] };
+
+// which rows to show per type
+const TYPE_ROWS = {
+  text:       ['label','required','disabled','readonly','placeholder','value','pattern','minlength','maxlength','autocomplete','css'],
+  password:   ['label','required','disabled','readonly','placeholder','value','pattern','minlength','maxlength','autocomplete','css'],
+  email:      ['label','required','disabled','readonly','placeholder','value','autocomplete','css'],
+  url:        ['label','required','disabled','readonly','placeholder','value','autocomplete','css'],
+  tel:        ['label','required','disabled','readonly','placeholder','value','pattern','autocomplete','css'],
+  search:     ['label','required','disabled','readonly','placeholder','value','css'],
+  number:     ['label','required','disabled','readonly','placeholder','value','min','max','step','css'],
+  range:      ['label','required','disabled','value','min','max','step','css'],
+  date:       ['label','required','disabled','readonly','value','min','max','css'],
+  time:       ['label','required','disabled','readonly','value','min','max','step','css'],
+  'datetime-local':['label','required','disabled','readonly','value','min','max','css'],
+  month:      ['label','required','disabled','readonly','value','min','max','css'],
+  week:       ['label','required','disabled','readonly','value','min','max','css'],
+  color:      ['label','required','disabled','value','css'],
+  textarea:   ['label','required','disabled','readonly','placeholder','value','maxlength','rows','cols','css'],
+  file:       ['label','required','disabled','accept','multiple','css'],
+  select:     ['label','required','disabled','multiple','size','css'],
+  radio:      ['label','required','disabled','css'],
+  checkbox:   ['label','required','disabled','readonly','value','checked','css'],
+  checkbox_group:['label','required','disabled','css'],
+  hidden:     ['value'],
+  button:     ['value','css'],
+};
+
+const ALL_ROWS = ['label','required','disabled','readonly','placeholder','value','pattern','minlength','maxlength','min','max','step','rows','cols','accept','multiple','size','checked','autocomplete','css'];
+
+function loadFieldPane() {
+  const f = selectedField();
+  if (!f) return;
+
+  document.getElementById('f-id').value = f.id || '';
+  document.getElementById('f-type').value = f.type || 'text';
+  document.getElementById('f-label').value = f.label || '';
+  document.getElementById('f-required').checked = !!f.required;
+  document.getElementById('f-disabled').checked = !!f.disabled;
+  document.getElementById('f-readonly').checked = !!f.readonly;
+  document.getElementById('f-placeholder').value = f.placeholder || '';
+  document.getElementById('f-value').value = f.value || '';
+  document.getElementById('f-pattern').value = f.pattern || '';
+  document.getElementById('f-minlength').value = f.minlength || '';
+  document.getElementById('f-maxlength').value = f.maxlength || '';
+  document.getElementById('f-min').value = f.min != null ? String(f.min) : '';
+  document.getElementById('f-max').value = f.max != null ? String(f.max) : '';
+  document.getElementById('f-step').value = f.step != null ? String(f.step) : '';
+  document.getElementById('f-rows').value = f.rows || '';
+  document.getElementById('f-cols').value = f.cols || '';
+  document.getElementById('f-accept').value = f.accept || '';
+  document.getElementById('f-multiple').checked = !!f.multiple;
+  document.getElementById('f-size').value = f.size || '';
+  document.getElementById('f-checked').checked = !!f.checked;
+  document.getElementById('f-autocomplete').value = f.autocomplete || '';
+  document.getElementById('f-css').value = f.css_class || '';
+  document.getElementById('f-placeholder-opt').value = f.placeholder || '';
+
+  updateFieldRows(f.type || 'text');
+  renderOptions(f);
+}
+
+function updateFieldRows(type) {
+  const visible = new Set(TYPE_ROWS[type] || []);
+  ALL_ROWS.forEach(r => {
+    const el = document.getElementById('f-'+r+'-row');
+    if (el) el.style.display = visible.has(r) ? '' : 'none';
+  });
+  const hasOpts = ['select','radio','checkbox_group'].includes(type);
+  document.getElementById('f-options-block').style.display = hasOpts ? '' : 'none';
+  // placeholder inside options block for select
+  const poptRow = document.getElementById('f-placeholder-opt-row');
+  if (poptRow) poptRow.style.display = type === 'select' ? '' : 'none';
+}
+
+function fieldTypeChanged() {
+  const type = document.getElementById('f-type').value;
+  const f = selectedField();
+  if (f) { f.type = type; updateFieldRows(type); renderOptions(f); renderTree(); }
+}
+
+function fieldChanged(key, val) {
+  const f = selectedField();
+  if (!f) return;
+  if (typeof val === 'boolean') { f[key] = val; }
+  else if (val === '') { delete f[key]; }
+  else if (['minlength','maxlength','rows','cols','size'].includes(key)) { f[key] = parseInt(val)||''; }
+  else if (['min','max','step'].includes(key)) {
+    // keep as string; TOML generator will decide
+    f[key] = val;
+  } else { f[key] = val; }
+  if (key === 'label' || key === 'id') renderTree();
+}
+
+// ─── Options ──────────────────────────────────────────────────────────────────
+function renderOptions(f) {
+  const tbody = document.getElementById('options-tbody');
+  tbody.innerHTML = '';
+  (f.options || []).forEach((opt, i) => {
+    const tr = document.createElement('tr');
+    const isCheckbox = (f.type === 'checkbox_group');
+    tr.innerHTML = `
+      <td><input type="text" value="${esc(opt.label)}" oninput="optChanged(${i},'label',this.value)"></td>
+      <td><input type="text" value="${esc(opt.value)}" oninput="optChanged(${i},'value',this.value)"></td>
+      <td style="text-align:center"><input type="checkbox" ${opt.selected||opt.checked?'checked':''} onchange="optChanged(${i},'${isCheckbox?'checked':'selected'}',this.checked)" title="${isCheckbox?'checked':'selected'}"></td>
+      <td style="text-align:center"><input type="checkbox" ${opt.disabled?'checked':''} onchange="optChanged(${i},'disabled',this.checked)"></td>
+      <td><button class="opt-del" onclick="deleteOption(${i})">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function optChanged(i, key, val) {
+  const f = selectedField();
+  if (!f || !f.options) return;
+  f.options[i][key] = val;
+}
+
+function addOption() {
+  const f = selectedField();
+  if (!f) return;
+  if (!f.options) f.options = [];
+  f.options.push({label:'Option '+(f.options.length+1), value:'opt'+(f.options.length+1), selected:false, disabled:false});
+  renderOptions(f);
+}
+
+function deleteOption(i) {
+  const f = selectedField();
+  if (!f || !f.options) return;
+  f.options.splice(i,1);
+  renderOptions(f);
+}
+
+// ─── Add items ────────────────────────────────────────────────────────────────
+function addPage() {
+  state.mode = 'paged';
+  state.sections = [];
+  const idx = state.pages.length;
+  state.pages.push({id:'page_'+uid(), title:'New Page', description:'', sections:[]});
+  selectPage(idx);
+  renderTree();
+}
+
+function addFlatSection() {
+  state.mode = 'flat';
+  state.pages = [];
+  const idx = state.sections.length;
+  state.sections.push({id:'section_'+uid(), title:'New Section', description:'', fields:[]});
+  selectSection(null, idx);
+  renderTree();
+}
+
+function addSectionToPage() {
+  const page = selectedPage();
+  if (!page) return;
+  const si = page.sections.length;
+  page.sections.push({id:'section_'+uid(), title:'New Section', description:'', fields:[]});
+  selectSection(sel.pageIdx, si);
+  renderTree();
+}
+
+function addFieldToSection() {
+  const sec = selectedSection();
+  if (!sec) return;
+  const fi = sec.fields.length;
+  sec.fields.push({id:'field_'+uid(), type:'text', label:'New Field', required:false, options:[]});
+  selectField(sel.pageIdx, sel.sectionIdx, fi);
+  renderTree();
+}
+
+// ─── Delete items ─────────────────────────────────────────────────────────────
+function deletePage(pi) {
+  const idx = pi != null ? pi : (sel ? sel.pageIdx : null);
+  if (idx == null) return;
+  state.pages.splice(idx, 1);
+  sel = null; selectMeta(); renderTree();
+}
+
+function deleteSectionAt(pi, si) {
+  if (state.mode === 'flat') { state.sections.splice(si,1); }
+  else { state.pages[pi].sections.splice(si,1); }
+  sel = null; selectMeta(); renderTree();
+}
+
+function deleteSection() {
+  if (!sel) return;
+  deleteSectionAt(sel.pageIdx, sel.sectionIdx);
+}
+
+function deleteFieldAt(pi, si, fi) {
+  if (state.mode === 'flat') { state.sections[si].fields.splice(fi,1); }
+  else { state.pages[pi].sections[si].fields.splice(fi,1); }
+  sel = null; selectMeta(); renderTree();
+}
+
+function deleteField() {
+  if (!sel) return;
+  deleteFieldAt(sel.pageIdx, sel.sectionIdx, sel.fieldIdx);
+}
+
+// ─── TOML generation ──────────────────────────────────────────────────────────
+function generateTOML() {
+  const lines = [];
+  const m = state.meta;
+  lines.push('[form]');
+  lines.push(`title        = ${tomlStr(m.title||'My Form')}`);
+  if (m.description) lines.push(`description  = ${tomlStr(m.description)}`);
+  if (m.action)      lines.push(`action       = ${tomlStr(m.action)}`);
+  if (m.method)      lines.push(`method       = ${tomlStr(m.method)}`);
+  if (m.enctype)     lines.push(`enctype      = ${tomlStr(m.enctype)}`);
+  if (m.submit_label) lines.push(`submit_label = ${tomlStr(m.submit_label)}`);
+  if (m.reset_label)  lines.push(`reset_label  = ${tomlStr(m.reset_label)}`);
+  lines.push('');
+
+  if (state.mode === 'paged') {
+    state.pages.forEach(page => {
+      lines.push('[[form.pages]]');
+      lines.push(`id          = ${tomlStr(page.id)}`);
+      if (page.title)       lines.push(`title       = ${tomlStr(page.title)}`);
+      if (page.description) lines.push(`description = ${tomlStr(page.description)}`);
+      lines.push('');
+      page.sections.forEach(sec => appendSection(lines, sec, '  [[form.pages.sections]]', '  [[form.pages.sections.fields]]', '  [[form.pages.sections.fields.options]]'));
+    });
+  } else {
+    state.sections.forEach(sec => appendSection(lines, sec, '[[form.sections]]', '[[form.sections.fields]]', '[[form.sections.fields.options]]'));
+  }
+
+  return lines.join('\n');
+}
+
+function appendSection(lines, sec, secTag, fieldTag, optTag) {
+  lines.push(secTag);
+  lines.push(`id    = ${tomlStr(sec.id)}`);
+  if (sec.title)       lines.push(`title = ${tomlStr(sec.title)}`);
+  if (sec.description) lines.push(`description = ${tomlStr(sec.description)}`);
+  lines.push('');
+  sec.fields.forEach(f => appendField(lines, f, fieldTag, optTag));
+}
+
+function appendField(lines, f, fieldTag, optTag) {
+  lines.push(fieldTag);
+  lines.push(`id    = ${tomlStr(f.id)}`);
+  lines.push(`type  = ${tomlStr(f.type)}`);
+  if (f.type !== 'hidden') lines.push(`label = ${tomlStr(f.label||f.id)}`);
+  if (f.required)   lines.push(`required     = true`);
+  if (f.disabled)   lines.push(`disabled     = true`);
+  if (f.readonly)   lines.push(`readonly     = true`);
+  if (f.value)      lines.push(`value        = ${tomlStr(f.value)}`);
+  if (f.placeholder && f.type !== 'checkbox_group' && f.type !== 'radio') lines.push(`placeholder  = ${tomlStr(f.placeholder)}`);
+  if (f.pattern)    lines.push(`pattern      = ${tomlStr(f.pattern)}`);
+  if (f.minlength)  lines.push(`minlength    = ${f.minlength}`);
+  if (f.maxlength)  lines.push(`maxlength    = ${f.maxlength}`);
+  if (f.min != null && f.min !== '') lines.push(`min          = ${tomlMinMaxStep(f.min)}`);
+  if (f.max != null && f.max !== '') lines.push(`max          = ${tomlMinMaxStep(f.max)}`);
+  if (f.step != null && f.step !== '') lines.push(`step         = ${tomlMinMaxStep(f.step)}`);
+  if (f.rows)       lines.push(`rows         = ${f.rows}`);
+  if (f.cols)       lines.push(`cols         = ${f.cols}`);
+  if (f.accept)     lines.push(`accept       = ${tomlStr(f.accept)}`);
+  if (f.multiple)   lines.push(`multiple     = true`);
+  if (f.size)       lines.push(`size         = ${f.size}`);
+  if (f.checked)    lines.push(`checked      = true`);
+  if (f.autocomplete) lines.push(`autocomplete = ${tomlStr(f.autocomplete)}`);
+  if (f.css_class)  lines.push(`css_class    = ${tomlStr(f.css_class)}`);
+  lines.push('');
+  if (f.options && f.options.length) {
+    f.options.forEach(opt => {
+      lines.push(optTag);
+      lines.push(`label = ${tomlStr(opt.label)}`);
+      lines.push(`value = ${tomlStr(opt.value)}`);
+      if (opt.selected) lines.push(`selected = true`);
+      if (opt.checked)  lines.push(`checked  = true`);
+      if (opt.disabled) lines.push(`disabled = true`);
+      lines.push('');
+    });
+  }
+}
+
+function tomlStr(s) { return '"'+String(s||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"'; }
+function tomlMinMaxStep(v) {
+  // numeric if it parses as a number, otherwise string
+  const n = Number(v);
+  return (!isNaN(n) && v !== '') ? String(v) : tomlStr(v);
+}
+
+// ─── Load TOML into builder (simple parser) ──────────────────────────────────
+function loadIntoBuilder() {
+  const tomlText = document.getElementById('toml-editor').value.trim();
+  if (!tomlText) { setBuilderStatus('TOML editor is empty.','err'); return; }
+  try {
+    parseIntoState(tomlText);
+    loadMetaPane();
+    selectMeta();
+    renderTree();
+    setBuilderStatus('Loaded from TOML editor.','ok');
+  } catch(e) {
+    setBuilderStatus('Parse error: '+e.message,'err');
+  }
+}
+
+function applyToEditor() {
+  const toml = generateTOML();
+  document.getElementById('toml-editor').value = toml;
+  switchTab('editor');
+  setEditorStatus('Generated from Visual Builder — review and save.','info');
+}
+
+function setBuilderStatus(msg, cls) {
+  const el = document.getElementById('builder-status');
+  el.textContent = msg;
+  el.className = 'apply-status status-'+cls;
+}
+
+// ─── Simple TOML parser (supports this project's specific format) ─────────────
+// This is a targeted parser for the form TOML structure — not a general TOML parser.
+function parseIntoState(text) {
+  const lines = text.split('\n');
+
+  // Reset state
+  state.meta = {title:'',description:'',action:'/submit',method:'post',enctype:'',submit_label:'',reset_label:''};
+  state.pages = [];
+  state.sections = [];
+  state.mode = 'flat';
+
+  let ctx = 'root'; // 'root','form','page','section','field','option'
+  let curPage = null, curSection = null, curField = null, curOption = null;
+  let isFlatSection = false;
+
+  function flushOption() {
+    if (curOption && curField) { curField.options.push(curOption); curOption = null; }
+  }
+  function flushField() {
+    flushOption();
+    if (curField && curSection) { curSection.fields.push(curField); curField = null; }
+  }
+  function flushSection() {
+    flushField();
+    if (curSection) {
+      if (isFlatSection) state.sections.push(curSection);
+      else if (curPage) curPage.sections.push(curSection);
+      curSection = null;
+    }
+  }
+  function flushPage() {
+    flushSection();
+    if (curPage) { state.pages.push(curPage); curPage = null; }
+  }
+
+  for (let raw of lines) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+
+    // Array of tables
+    if (line.startsWith('[[')) {
+      const tag = line.slice(2, line.indexOf(']]')).trim();
+      if (tag === 'form.pages') {
+        flushPage();
+        state.mode = 'paged';
+        curPage = {id:'',title:'',description:'',sections:[]};
+        ctx = 'page';
+      } else if (tag === 'form.pages.sections') {
+        flushSection();
+        isFlatSection = false;
+        curSection = {id:'',title:'',description:'',fields:[]};
+        ctx = 'section';
+      } else if (tag === 'form.pages.sections.fields') {
+        flushField();
+        curField = Object.assign({},FIELD_DEFAULTS,{options:[]});
+        ctx = 'field';
+      } else if (tag === 'form.pages.sections.fields.options') {
+        flushOption();
+        curOption = {label:'',value:'',selected:false,checked:false,disabled:false};
+        ctx = 'option';
+      } else if (tag === 'form.sections') {
+        flushSection();
+        isFlatSection = true;
+        curSection = {id:'',title:'',description:'',fields:[]};
+        ctx = 'section';
+      } else if (tag === 'form.sections.fields') {
+        flushField();
+        curField = Object.assign({},FIELD_DEFAULTS,{options:[]});
+        ctx = 'field';
+      } else if (tag === 'form.sections.fields.options') {
+        flushOption();
+        curOption = {label:'',value:'',selected:false,checked:false,disabled:false};
+        ctx = 'option';
+      }
+      continue;
+    }
+
+    // Regular table header
+    if (line.startsWith('[')) {
+      const tag = line.slice(1, line.indexOf(']')).trim();
+      if (tag === 'form') ctx = 'form';
+      continue;
+    }
+
+    // Key=value
+    const eqIdx = line.indexOf('=');
+    if (eqIdx < 0) continue;
+    const key = line.slice(0,eqIdx).trim();
+    const rawVal = line.slice(eqIdx+1).trim();
+    const val = parseTomlVal(rawVal);
+
+    if (ctx === 'form') {
+      if (key in state.meta) state.meta[key] = String(val);
+    } else if (ctx === 'page' && curPage) {
+      curPage[key] = String(val);
+    } else if (ctx === 'section' && curSection) {
+      curSection[key] = String(val);
+    } else if (ctx === 'field' && curField) {
+      if (['required','disabled','readonly','multiple','checked'].includes(key)) curField[key] = val === true || val === 'true';
+      else if (['minlength','maxlength','rows','cols','size'].includes(key)) curField[key] = parseInt(val)||0;
+      else curField[key] = val;
+    } else if (ctx === 'option' && curOption) {
+      if (['selected','checked','disabled'].includes(key)) curOption[key] = val === true || val === 'true';
+      else curOption[key] = String(val);
+    }
+  }
+
+  // Flush remaining
+  flushPage();
+  flushSection();
+}
+
+function parseTomlVal(raw) {
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  if ((raw.startsWith('"') && raw.endsWith('"')) ||
+      (raw.startsWith("'") && raw.endsWith("'"))) {
+    return raw.slice(1,-1).replace(/\\"/g,'"').replace(/\\\\/g,'\\');
+  }
+  const n = Number(raw);
+  if (!isNaN(n) && raw !== '') return n;
+  return raw;
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+(function init() {
+  const tomlText = document.getElementById('toml-editor').value;
+  if (tomlText.trim()) {
+    try { parseIntoState(tomlText); } catch(e) {}
+  }
+  loadMetaPane();
+  renderTree();
+  showPane('meta');
+})();
+</script>
+</body>
+</html>
+{{end}}

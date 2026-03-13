@@ -1,0 +1,191 @@
+{{define "form.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{.Form.Title}}</title>
+  <style>{{safeCSS .CSS}}</style>
+</head>
+<body>
+  <div class="form-container">
+    <h1>{{.Form.Title}}</h1>
+    {{if .Form.Description}}
+      <p class="form-description">{{.Form.Description}}</p>
+    {{end}}
+
+    {{if .Form.Pages}}
+    {{/* ── Multi-page form ─────────────────────────────────────────────── */}}
+
+    <div class="page-nav" aria-label="Form progress">
+      <ol class="page-steps" id="page-steps">
+        {{range $i, $page := .Form.Pages}}
+          <li class="step-item{{if eq $i 0}} active{{end}}" data-step="{{$i}}" aria-label="Step {{add1 $i}}: {{$page.Title}}">
+            <span class="step-bubble">{{add1 $i}}</span>
+            {{if $page.Title}}<span class="step-label">{{$page.Title}}</span>{{end}}
+          </li>
+        {{end}}
+      </ol>
+      <div class="progress-bar" role="progressbar" aria-valuemin="1" aria-valuemax="{{len .Form.Pages}}" aria-valuenow="1">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    </div>
+
+    <form
+      action="{{.Form.Action}}"
+      method="{{.Form.Method}}"
+      {{if .Form.Enctype}}enctype="{{.Form.Enctype}}"{{end}}
+      id="multipage-form"
+      novalidate
+    >
+      {{range $i, $page := .Form.Pages}}
+        <div
+          class="form-page{{if eq $i 0}} active{{end}}"
+          id="page-{{$page.ID}}"
+          data-page-index="{{$i}}"
+          data-page-title="{{$page.Title}}"
+        >
+          {{if $page.Description}}
+            <p class="page-description">{{$page.Description}}</p>
+          {{end}}
+
+          {{range $page.Sections}}
+            <fieldset id="{{.ID}}">
+              {{if .Title}}<legend>{{.Title}}</legend>{{end}}
+              {{if .Description}}<p class="section-description">{{.Description}}</p>{{end}}
+              {{range .Fields}}{{renderField .}}{{end}}
+            </fieldset>
+          {{end}}
+
+          <div class="page-actions">
+            <button type="button" class="btn-prev">&#8592; Back</button>
+            <button type="button" class="btn-next">Next &#8594;</button>
+            <button type="submit" class="btn-submit">{{$.Form.SubmitLabel}}</button>
+            {{if $.Form.ResetLabel}}
+              <button type="reset" class="btn-reset">{{$.Form.ResetLabel}}</button>
+            {{end}}
+          </div>
+        </div>
+      {{end}}
+    </form>
+
+    {{else}}
+    {{/* ── Single-page form ─────────────────────────────────────────────── */}}
+
+    <form
+      action="{{.Form.Action}}"
+      method="{{.Form.Method}}"
+      {{if .Form.Enctype}}enctype="{{.Form.Enctype}}"{{end}}
+      novalidate
+    >
+      {{range .Form.Sections}}
+        <fieldset id="{{.ID}}">
+          {{if .Title}}<legend>{{.Title}}</legend>{{end}}
+          {{if .Description}}<p class="section-description">{{.Description}}</p>{{end}}
+          {{range .Fields}}{{renderField .}}{{end}}
+        </fieldset>
+      {{end}}
+
+      <div class="form-actions">
+        <button type="submit">{{.Form.SubmitLabel}}</button>
+        {{if .Form.ResetLabel}}
+          <button type="reset">{{.Form.ResetLabel}}</button>
+        {{end}}
+      </div>
+    </form>
+
+    {{end}}
+  </div>
+
+  <script>
+  (function () {
+    // ── Range input live display ──────────────────────────────────────────────
+    document.querySelectorAll('input[type="range"]').forEach(function (input) {
+      var out = document.getElementById(input.id + '_output');
+      if (out) {
+        out.textContent = input.value;
+        input.addEventListener('input', function () { out.textContent = this.value; });
+      }
+    });
+
+    // ── Multi-page navigation ─────────────────────────────────────────────────
+    var pages = Array.from(document.querySelectorAll('.form-page'));
+    if (pages.length < 2) return; // single-page or only one page — nothing to do
+
+    var totalPages   = pages.length;
+    var currentIndex = 0;
+    var stepItems    = Array.from(document.querySelectorAll('.step-item'));
+    var progressFill = document.getElementById('progress-fill');
+    var progressBar  = document.querySelector('.progress-bar');
+
+    function showPage(index) {
+      pages.forEach(function (p, i) {
+        p.classList.toggle('active', i === index);
+      });
+      stepItems.forEach(function (s, i) {
+        s.classList.toggle('active',    i === index);
+        s.classList.toggle('completed', i < index);
+      });
+      if (progressFill) {
+        progressFill.style.width = ((index + 1) / totalPages * 100) + '%';
+      }
+      if (progressBar) {
+        progressBar.setAttribute('aria-valuenow', index + 1);
+      }
+      currentIndex = index;
+      updateButtons();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function updateButtons() {
+      pages.forEach(function (p, i) {
+        var prev   = p.querySelector('.btn-prev');
+        var next   = p.querySelector('.btn-next');
+        var submit = p.querySelector('.btn-submit');
+        var reset  = p.querySelector('.btn-reset');
+        var isLast = i === totalPages - 1;
+
+        if (prev)   prev.style.display   = (i === 0) ? 'none' : '';
+        if (next)   next.style.display   = isLast    ? 'none' : '';
+        if (submit) submit.style.display = isLast    ? '' : 'none';
+        if (reset)  reset.style.display  = isLast    ? '' : 'none';
+      });
+    }
+
+    function validatePage(index) {
+      var page   = pages[index];
+      var fields = Array.from(page.querySelectorAll('input, select, textarea'));
+      for (var i = 0; i < fields.length; i++) {
+        if (!fields[i].checkValidity()) {
+          fields[i].reportValidity();
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // Wire up buttons on every page
+    pages.forEach(function (p, i) {
+      var prev = p.querySelector('.btn-prev');
+      var next = p.querySelector('.btn-next');
+      if (prev) prev.addEventListener('click', function () { showPage(i - 1); });
+      if (next) next.addEventListener('click', function () {
+        if (validatePage(i)) showPage(i + 1);
+      });
+    });
+
+    // On reset, return to the first page
+    var form = document.getElementById('multipage-form');
+    if (form) {
+      form.addEventListener('reset', function () {
+        setTimeout(function () { showPage(0); }, 0);
+      });
+    }
+
+    // Initialize
+    showPage(0);
+  }());
+  </script>
+</body>
+</html>
+{{end}}

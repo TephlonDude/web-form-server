@@ -1,0 +1,18 @@
+# Submissions output
+data/submissions/*.json
+
+# Go build artifacts
+web-form-server
+web-form-server.exe
+
+# Go module cache
+go.sum
+
+# Docker
+.env
+
+# Server credentials
+.server-config
+
+# Editor
+.vscode/

@@ -1,0 +1,312 @@
+# example.form.toml
+# Demonstrates every supported field type using the multi-page form format.
+#
+# Form structure — use ONE of:
+#   [[form.pages]]    multi-page: each page has id, title, description, sections
+#   [[form.sections]] single-page: flat sections directly under [form]
+#
+# Copy and rename this file, then set FORM_FILE in docker-compose.yml.
+
+[form]
+title        = "Web Form Server — Multi-Page Demo"
+description  = "A three-step form demonstrating every supported field type."
+action       = "/submit"
+method       = "post"
+enctype      = "multipart/form-data"  # Required when any file field is present
+submit_label = "Submit Form"
+reset_label  = "Start Over"
+
+
+# ── Page 1: Contact Info ───────────────────────────────────────────────────────
+
+[[form.pages]]
+id          = "contact"
+title       = "Contact Info"
+description = "Tell us how to reach you."
+
+  [[form.pages.sections]]
+  id    = "basic_text"
+  title = "Basic Details"
+
+    [[form.pages.sections.fields]]
+    id            = "full_name"
+    type          = "text"
+    label         = "Full Name"
+    required      = true
+    placeholder   = "Jane Doe"
+    minlength     = 2
+    maxlength     = 100
+    autocomplete  = "name"
+
+    [[form.pages.sections.fields]]
+    id           = "email_address"
+    type         = "email"
+    label        = "Email Address"
+    required     = true
+    placeholder  = "jane@example.com"
+    autocomplete = "email"
+
+    [[form.pages.sections.fields]]
+    id          = "user_password"
+    type        = "password"
+    label       = "Password"
+    required    = true
+    placeholder = "Minimum 8 characters"
+    minlength   = 8
+
+    [[form.pages.sections.fields]]
+    id           = "phone_number"
+    type         = "tel"
+    label        = "Phone Number"
+    placeholder  = "+1 (555) 000-0000"
+    pattern      = "[+][0-9 ()\\-]{7,20}"
+    autocomplete = "tel"
+
+    [[form.pages.sections.fields]]
+    id           = "website"
+    type         = "url"
+    label        = "Website"
+    placeholder  = "https://example.com"
+    autocomplete = "url"
+
+  [[form.pages.sections]]
+  id    = "date_fields"
+  title = "Date & Time"
+
+    [[form.pages.sections.fields]]
+    id    = "birth_date"
+    type  = "date"
+    label = "Date of Birth"
+    min   = "1900-01-01"
+    max   = "2010-12-31"
+
+    [[form.pages.sections.fields]]
+    id          = "appt_time"
+    type        = "time"
+    label       = "Preferred Appointment Time"
+    min         = "08:00"
+    max         = "17:00"
+    step        = 900  # 15-minute intervals (seconds)
+
+    [[form.pages.sections.fields]]
+    id    = "meeting_datetime"
+    type  = "datetime-local"
+    label = "Meeting Date & Time"
+    min   = "2026-01-01T08:00"
+    max   = "2027-12-31T17:00"
+
+    [[form.pages.sections.fields]]
+    id    = "start_month"
+    type  = "month"
+    label = "Start Month"
+    min   = "2026-01"
+    max   = "2027-12"
+
+    [[form.pages.sections.fields]]
+    id    = "iso_week"
+    type  = "week"
+    label = "Select Week"
+    min   = "2026-W01"
+    max   = "2026-W52"
+
+
+# ── Page 2: Preferences ────────────────────────────────────────────────────────
+
+[[form.pages]]
+id          = "preferences"
+title       = "Preferences"
+description = "Share your background and preferences."
+
+  [[form.pages.sections]]
+  id    = "selections"
+  title = "About You"
+
+    [[form.pages.sections.fields]]
+    id          = "country"
+    type        = "select"
+    label       = "Country"
+    required    = true
+    placeholder = "-- Select a country --"
+
+      [[form.pages.sections.fields.options]]
+      label = "United States"
+      value = "us"
+
+      [[form.pages.sections.fields.options]]
+      label = "Canada"
+      value = "ca"
+
+      [[form.pages.sections.fields.options]]
+      label = "United Kingdom"
+      value = "uk"
+
+      [[form.pages.sections.fields.options]]
+      label = "Australia"
+      value = "au"
+
+      [[form.pages.sections.fields.options]]
+      label = "Other"
+      value = "other"
+
+    [[form.pages.sections.fields]]
+    id       = "languages"
+    type     = "select"
+    label    = "Languages Spoken"
+    multiple = true
+    size     = 5
+
+      [[form.pages.sections.fields.options]]
+      label    = "English"
+      value    = "en"
+      selected = true
+
+      [[form.pages.sections.fields.options]]
+      label = "French"
+      value = "fr"
+
+      [[form.pages.sections.fields.options]]
+      label = "Spanish"
+      value = "es"
+
+      [[form.pages.sections.fields.options]]
+      label = "German"
+      value = "de"
+
+      [[form.pages.sections.fields.options]]
+      label = "Mandarin"
+      value = "zh"
+
+    [[form.pages.sections.fields]]
+    id    = "gender"
+    type  = "radio"
+    label = "Gender"
+
+      [[form.pages.sections.fields.options]]
+      label = "Male"
+      value = "male"
+
+      [[form.pages.sections.fields.options]]
+      label = "Female"
+      value = "female"
+
+      [[form.pages.sections.fields.options]]
+      label = "Non-binary"
+      value = "nonbinary"
+
+      [[form.pages.sections.fields.options]]
+      label = "Prefer not to say"
+      value = "no_answer"
+
+    [[form.pages.sections.fields]]
+    id    = "interests"
+    type  = "checkbox_group"
+    label = "Interests"
+
+      [[form.pages.sections.fields.options]]
+      label   = "Technology"
+      value   = "tech"
+      checked = true
+
+      [[form.pages.sections.fields.options]]
+      label = "Sports"
+      value = "sports"
+
+      [[form.pages.sections.fields.options]]
+      label = "Music"
+      value = "music"
+
+      [[form.pages.sections.fields.options]]
+      label = "Travel"
+      value = "travel"
+
+      [[form.pages.sections.fields.options]]
+      label = "Cooking"
+      value = "cooking"
+
+  [[form.pages.sections]]
+  id    = "numeric_color"
+  title = "Numeric & Color"
+
+    [[form.pages.sections.fields]]
+    id          = "age"
+    type        = "number"
+    label       = "Age"
+    min         = 0
+    max         = 120
+    step        = 1
+    placeholder = "25"
+
+    [[form.pages.sections.fields]]
+    id    = "satisfaction"
+    type  = "range"
+    label = "Satisfaction Score (1–10)"
+    min   = 1
+    max   = 10
+    step  = 1
+    value = "5"
+
+    [[form.pages.sections.fields]]
+    id    = "brand_color"
+    type  = "color"
+    label = "Favorite Color"
+    value = "#3498db"
+
+    [[form.pages.sections.fields]]
+    id          = "search_query"
+    type        = "search"
+    label       = "Search Keywords"
+    placeholder = "Enter keywords..."
+
+
+# ── Page 3: Submit ─────────────────────────────────────────────────────────────
+
+[[form.pages]]
+id          = "submission"
+title       = "Submit"
+description = "Add any final details and submit your response."
+
+  [[form.pages.sections]]
+  id    = "extra_info"
+  title = "Additional Information"
+
+    [[form.pages.sections.fields]]
+    id          = "comments"
+    type        = "textarea"
+    label       = "Additional Comments"
+    placeholder = "Share any additional thoughts here..."
+    rows        = 6
+    maxlength   = 2000
+
+  [[form.pages.sections]]
+  id    = "file_uploads"
+  title = "File Uploads"
+
+    [[form.pages.sections.fields]]
+    id     = "resume"
+    type   = "file"
+    label  = "Upload Resume"
+    accept = ".pdf,.doc,.docx"
+
+    [[form.pages.sections.fields]]
+    id       = "photos"
+    type     = "file"
+    label    = "Upload Photos (multiple)"
+    accept   = "image/*"
+    multiple = true
+
+  [[form.pages.sections]]
+  id    = "agreement"
+  title = "Agreement"
+
+    [[form.pages.sections.fields]]
+    id       = "agree_terms"
+    type     = "checkbox"
+    label    = "I agree to the Terms of Service and Privacy Policy"
+    required = true
+    value    = "yes"
+
+    # Hidden field — submitted automatically, not visible to the user
+    [[form.pages.sections.fields]]
+    id    = "form_version"
+    type  = "hidden"
+    value = "2.0.0"
