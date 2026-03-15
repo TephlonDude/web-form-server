@@ -1,11 +1,11 @@
 # Web Form Server
 
-A Docker-containerized web server that renders fully functional HTML forms from a TOML configuration file. Deploy any form by editing two files — no code changes needed.
+A Docker-containerized web server that renders fully functional HTML forms from a JSON configuration file. Deploy any form by editing two files — no code changes needed.
 
-- **Config-driven** — define your entire form in a `.toml` file
+- **Config-driven** — define your entire form in a `.json` file
 - **Multi-page support** — step indicator, progress bar, per-page validation
 - **All HTML input types** — text, email, date, file upload, select, radio, checkbox groups, range sliders, color pickers, and more
-- **Visual editor** — built-in `/config` page with a TOML text editor and point-and-click form builder
+- **Visual editor** — built-in `/config` page with a JSON text editor and point-and-click form builder
 - **Tiny footprint** — ~15 MB Alpine-based Docker image, single static binary
 - **Submission persistence** — logs to stdout and optionally saves timestamped JSON files
 
@@ -14,7 +14,7 @@ A Docker-containerized web server that renders fully functional HTML forms from 
 ## Quick Start
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/TephlonDude/web-form-server.git
 cd web-form-server
 docker compose up -d
 ```
@@ -24,9 +24,21 @@ Open [http://localhost:8237/config](http://localhost:8237/config) to edit it.
 
 ---
 
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Language | Go 1.22 — stdlib only (`net/http`, `html/template`, `encoding/json`, `embed`) |
+| Container | Docker + Docker Compose — multi-stage build, ~15 MB Alpine image |
+| Config editor | CodeMirror 5 (v5.65.16, cdnjs) — syntax highlighting, line numbers, code folding |
+| Client-side | Vanilla JavaScript — Visual Builder, multi-page navigation |
+| Form validation | HTML5 `checkValidity()` API — per-page validation in multi-step forms |
+
+---
+
 ## Configuration
 
-The form is defined in a TOML file (default: `web-config/example.form.toml`). Point to your own file with the `FORM_FILE` environment variable.
+The form is defined in a JSON file (default: `web-config/example.form.json`). Point to your own file with the `FORM_FILE` environment variable.
 
 ### Form Structure
 
@@ -34,61 +46,81 @@ Use **one** of two layouts:
 
 | Layout | When to use | Top-level key |
 |---|---|---|
-| Single-page | One scrollable page | `[[form.sections]]` |
-| Multi-page | Wizard with steps | `[[form.pages]]` |
+| Single-page | One scrollable page | `"sections"` |
+| Multi-page | Wizard with steps | `"pages"` |
 
 #### Single-page
 
-```toml
-[form]
-title        = "Contact Us"
-submit_label = "Send Message"
-
-[[form.sections]]
-id    = "contact"
-title = "Your Details"
-
-  [[form.sections.fields]]
-  id    = "full_name"
-  type  = "text"
-  label = "Full Name"
-  required = true
+```json
+{
+  "form": {
+    "title": "Contact Us",
+    "submit_label": "Send Message",
+    "sections": [
+      {
+        "id": "contact",
+        "title": "Your Details",
+        "fields": [
+          {
+            "id": "full_name",
+            "type": "text",
+            "label": "Full Name",
+            "required": true
+          }
+        ]
+      }
+    ]
+  }
+}
 ```
 
 #### Multi-page
 
-```toml
-[form]
-title        = "Registration"
-submit_label = "Complete Registration"
-
-[[form.pages]]
-id          = "step1"
-title       = "Personal Info"
-description = "Tell us about yourself."
-
-  [[form.pages.sections]]
-  id    = "basics"
-  title = "Basic Details"
-
-    [[form.pages.sections.fields]]
-    id    = "full_name"
-    type  = "text"
-    label = "Full Name"
-
-[[form.pages]]
-id    = "step2"
-title = "Preferences"
-
-  [[form.pages.sections]]
-  id    = "prefs"
-  title = "Your Preferences"
-
-    [[form.pages.sections.fields]]
-    id    = "newsletter"
-    type  = "checkbox"
-    label = "Subscribe to newsletter"
-    value = "yes"
+```json
+{
+  "form": {
+    "title": "Registration",
+    "submit_label": "Complete Registration",
+    "pages": [
+      {
+        "id": "step1",
+        "title": "Personal Info",
+        "description": "Tell us about yourself.",
+        "sections": [
+          {
+            "id": "basics",
+            "title": "Basic Details",
+            "fields": [
+              {
+                "id": "full_name",
+                "type": "text",
+                "label": "Full Name"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "step2",
+        "title": "Preferences",
+        "sections": [
+          {
+            "id": "prefs",
+            "title": "Your Preferences",
+            "fields": [
+              {
+                "id": "newsletter",
+                "type": "checkbox",
+                "label": "Subscribe to newsletter",
+                "value": "yes"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
 ```
 
 ### Form-level Keys
@@ -137,17 +169,18 @@ Every field type supports these keys:
 
 `text` `password` `email` `url` `tel` `search`
 
-```toml
-[[form.sections.fields]]
-id           = "full_name"
-type         = "text"
-label        = "Full Name"
-required     = true
-placeholder  = "Jane Doe"
-pattern      = "[A-Za-z ]+"
-minlength    = 2
-maxlength    = 100
-autocomplete = "name"
+```json
+{
+  "id": "full_name",
+  "type": "text",
+  "label": "Full Name",
+  "required": true,
+  "placeholder": "Jane Doe",
+  "pattern": "[A-Za-z ]+",
+  "minlength": 2,
+  "maxlength": 100,
+  "autocomplete": "name"
+}
 ```
 
 | Extra key | Description |
@@ -162,24 +195,30 @@ autocomplete = "name"
 
 `number` `range`
 
-```toml
-[[form.sections.fields]]
-id    = "age"
-type  = "number"
-label = "Age"
-min   = 0
-max   = 120
-step  = 1
-
-[[form.sections.fields]]
-id    = "rating"
-type  = "range"
-label = "Satisfaction (1–10)"
-min   = 1
-max   = 10
-step  = 1
-value = "5"   # range fields render a live <output> display
+```json
+{
+  "id": "age",
+  "type": "number",
+  "label": "Age",
+  "min": 0,
+  "max": 120,
+  "step": 1
+}
 ```
+
+```json
+{
+  "id": "rating",
+  "type": "range",
+  "label": "Satisfaction (1–10)",
+  "min": 1,
+  "max": 10,
+  "step": 1,
+  "value": "5"
+}
+```
+
+Range fields render a live `<output>` display alongside the slider.
 
 | Extra key | Description |
 |---|---|
@@ -193,28 +232,35 @@ value = "5"   # range fields render a live <output> display
 
 `date` `time` `datetime-local` `month` `week`
 
-```toml
-[[form.sections.fields]]
-id    = "birth_date"
-type  = "date"
-label = "Date of Birth"
-min   = "1900-01-01"
-max   = "2010-12-31"
+```json
+{
+  "id": "birth_date",
+  "type": "date",
+  "label": "Date of Birth",
+  "min": "1900-01-01",
+  "max": "2010-12-31"
+}
+```
 
-[[form.sections.fields]]
-id    = "appt_time"
-type  = "time"
-label = "Appointment Time"
-min   = "08:00"
-max   = "17:00"
-step  = 900   # seconds — 900 = 15-minute intervals
+```json
+{
+  "id": "appt_time",
+  "type": "time",
+  "label": "Appointment Time",
+  "min": "08:00",
+  "max": "17:00",
+  "step": 900
+}
+```
 
-[[form.sections.fields]]
-id    = "meeting"
-type  = "datetime-local"
-label = "Meeting Date & Time"
-min   = "2026-01-01T08:00"
-max   = "2027-12-31T17:00"
+```json
+{
+  "id": "meeting",
+  "type": "datetime-local",
+  "label": "Meeting Date & Time",
+  "min": "2026-01-01T08:00",
+  "max": "2027-12-31T17:00"
+}
 ```
 
 `min` and `max` accept the format matching the field type:
@@ -224,31 +270,35 @@ max   = "2027-12-31T17:00"
 - `month` → `YYYY-MM`
 - `week` → `YYYY-Www`
 
+`step` for `time` is in seconds (e.g. `900` = 15-minute intervals).
+
 ---
 
 ### Color
 
-```toml
-[[form.sections.fields]]
-id    = "brand_color"
-type  = "color"
-label = "Brand Color"
-value = "#3498db"
+```json
+{
+  "id": "brand_color",
+  "type": "color",
+  "label": "Brand Color",
+  "value": "#3498db"
+}
 ```
 
 ---
 
 ### Textarea
 
-```toml
-[[form.sections.fields]]
-id          = "comments"
-type        = "textarea"
-label       = "Additional Comments"
-placeholder = "Enter your thoughts here…"
-rows        = 6
-cols        = 60
-maxlength   = 2000
+```json
+{
+  "id": "comments",
+  "type": "textarea",
+  "label": "Additional Comments",
+  "placeholder": "Enter your thoughts here…",
+  "rows": 6,
+  "cols": 60,
+  "maxlength": 2000
+}
 ```
 
 | Extra key | Description |
@@ -261,38 +311,34 @@ maxlength   = 2000
 
 ### Select (single and multi)
 
-```toml
-[[form.sections.fields]]
-id          = "country"
-type        = "select"
-label       = "Country"
-required    = true
-placeholder = "-- Select a country --"   # disabled first option
+```json
+{
+  "id": "country",
+  "type": "select",
+  "label": "Country",
+  "required": true,
+  "placeholder": "-- Select a country --",
+  "options": [
+    { "label": "United States", "value": "us" },
+    { "label": "Canada",        "value": "ca", "selected": true },
+    { "label": "Other",         "value": "other" }
+  ]
+}
+```
 
-  [[form.sections.fields.options]]
-  label = "United States"
-  value = "us"
-
-  [[form.sections.fields.options]]
-  label    = "Canada"
-  value    = "ca"
-  selected = true   # pre-selected
-
-[[form.sections.fields]]
-id       = "languages"
-type     = "select"
-label    = "Languages Spoken"
-multiple = true
-size     = 5   # visible rows in multi-select
-
-  [[form.sections.fields.options]]
-  label    = "English"
-  value    = "en"
-  selected = true
-
-  [[form.sections.fields.options]]
-  label = "French"
-  value = "fr"
+```json
+{
+  "id": "languages",
+  "type": "select",
+  "label": "Languages Spoken",
+  "multiple": true,
+  "size": 5,
+  "options": [
+    { "label": "English", "value": "en", "selected": true },
+    { "label": "French",  "value": "fr" },
+    { "label": "Spanish", "value": "es" }
+  ]
+}
 ```
 
 | Extra key | Description |
@@ -307,26 +353,18 @@ size     = 5   # visible rows in multi-select
 
 ### Radio Group
 
-```toml
-[[form.sections.fields]]
-id       = "plan"
-type     = "radio"
-label    = "Choose Plan"
-required = true
-
-  [[form.sections.fields.options]]
-  label = "Free"
-  value = "free"
-
-  [[form.sections.fields.options]]
-  label   = "Pro"
-  value   = "pro"
-  checked = true   # pre-selected
-
-  [[form.sections.fields.options]]
-  label    = "Enterprise"
-  value    = "enterprise"
-  disabled = true
+```json
+{
+  "id": "plan",
+  "type": "radio",
+  "label": "Choose Plan",
+  "required": true,
+  "options": [
+    { "label": "Free",       "value": "free" },
+    { "label": "Pro",        "value": "pro",        "checked": true },
+    { "label": "Enterprise", "value": "enterprise", "disabled": true }
+  ]
+}
 ```
 
 **Option keys:** `label` (required), `value` (required), `checked`, `disabled`
@@ -335,15 +373,17 @@ required = true
 
 ### Checkbox (single)
 
-```toml
-[[form.sections.fields]]
-id       = "agree_terms"
-type     = "checkbox"
-label    = "I agree to the Terms of Service"
-required = true
-value    = "yes"    # value submitted when checked (default: "on")
-checked  = false    # pre-checked state
+```json
+{
+  "id": "agree_terms",
+  "type": "checkbox",
+  "label": "I agree to the Terms of Service",
+  "required": true,
+  "value": "yes"
+}
 ```
+
+`value` is the submitted value when checked (default: `"on"`).
 
 ---
 
@@ -351,70 +391,68 @@ checked  = false    # pre-checked state
 
 Submits as `fieldname[]` so the server receives a list.
 
-```toml
-[[form.sections.fields]]
-id    = "interests"
-type  = "checkbox_group"
-label = "Interests"
-
-  [[form.sections.fields.options]]
-  label   = "Technology"
-  value   = "tech"
-  checked = true   # pre-checked
-
-  [[form.sections.fields.options]]
-  label = "Sports"
-  value = "sports"
-
-  [[form.sections.fields.options]]
-  label    = "Music"
-  value    = "music"
-  disabled = true
+```json
+{
+  "id": "interests",
+  "type": "checkbox_group",
+  "label": "Interests",
+  "options": [
+    { "label": "Technology", "value": "tech",    "checked": true },
+    { "label": "Sports",     "value": "sports" },
+    { "label": "Music",      "value": "music",   "disabled": true }
+  ]
+}
 ```
 
 ---
 
 ### File Upload
 
-```toml
-[[form.sections.fields]]
-id     = "resume"
-type   = "file"
-label  = "Upload Resume"
-accept = ".pdf,.doc,.docx"
-
-[[form.sections.fields]]
-id       = "photos"
-type     = "file"
-label    = "Upload Photos"
-accept   = "image/*"
-multiple = true
+```json
+{
+  "id": "resume",
+  "type": "file",
+  "label": "Upload Resume",
+  "accept": ".pdf,.doc,.docx"
+}
 ```
 
-When any file field is present, set `enctype = "multipart/form-data"` on `[form]`.
+```json
+{
+  "id": "photos",
+  "type": "file",
+  "label": "Upload Photos",
+  "accept": "image/*",
+  "multiple": true
+}
+```
+
+When any file field is present, set `"enctype": "multipart/form-data"` on the form.
 
 ---
 
 ### Hidden
 
-```toml
-[[form.sections.fields]]
-id    = "form_version"
-type  = "hidden"
-value = "2.0.0"
+```json
+{
+  "id": "form_version",
+  "type": "hidden",
+  "value": "2.0.0"
+}
 ```
 
 ---
 
 ### Button
 
-```toml
-[[form.sections.fields]]
-id        = "preview_btn"
-type      = "button"
-value     = "Preview"
-css_class = "btn-secondary"
-title     = "Preview before submitting"
+```json
+{
+  "id": "preview_btn",
+  "type": "button",
+  "value": "Preview",
+  "css_class": "btn-secondary",
+  "title": "Preview before submitting"
+}
 ```
 
 ---
@@ -423,14 +461,14 @@ title     = "Preview before submitting"
 
 Navigate to `/config` while the container is running.
 
-**TOML Editor tab** — Edit the raw TOML file directly with Load and Save buttons. The save endpoint validates the TOML before writing; invalid configs are rejected with an error message.
+**JSON Editor tab** — Edit the raw JSON file directly with Load and Save buttons. The save endpoint validates the JSON before writing; invalid configs are rejected with an error message.
 
 **Visual Builder tab** — Point-and-click form construction:
 - Tree panel shows the full page → section → field hierarchy
 - Click any node to edit its properties in the right panel
 - Type-aware field editor shows only the relevant properties for each field type
 - Options table for `select`, `radio`, and `checkbox_group` fields
-- "Apply to TOML Editor" generates the TOML and switches tabs for review before saving
+- "Apply to JSON Editor" generates the JSON and switches tabs for review before saving
 
 ---
 
@@ -500,17 +538,21 @@ input:invalid, input:valid {}
 
 | Variable | Default | Description |
 |---|---|---|
-| `FORM_FILE` | `/web-config/form.toml` | Path to the TOML form definition |
+| `FORM_FILE` | `/web-config/form.json` | Path to the JSON form definition |
 | `CSS_FILE` | `/web-config/form.css` | Path to the CSS stylesheet |
 | `PORT` | `5000` | Container listen port |
 | `SAVE_SUBMISSIONS` | `false` | Write JSON files to `SUBMISSIONS_DIR` when `true` |
 | `SUBMISSIONS_DIR` | `/data/submissions` | Directory for saved submission JSON files |
+| `CONFIG_USER` | *(unset)* | Username to protect `/config` with HTTP Basic Auth |
+| `CONFIG_PASS` | *(unset)* | Password to protect `/config` with HTTP Basic Auth |
+
+> **Security:** Always set `CONFIG_USER` and `CONFIG_PASS` on any internet-facing deployment to protect the form editor.
 
 Override any variable in `docker-compose.yml`:
 
 ```yaml
 environment:
-  FORM_FILE: /web-config/my-form.toml
+  FORM_FILE: /web-config/my-form.json
   CSS_FILE:  /web-config/my-form.css
   SAVE_SUBMISSIONS: "true"
 ```
@@ -540,7 +582,7 @@ HOST_PORT=9000 docker compose up -d
 ./deploy.sh --rebuild   # Force full rebuild (no cache)
 ```
 
-The script builds the image locally, saves it as a tarball, copies it via SCP, loads it on the remote host, and restarts the container. Requires Docker on the remote host and SSH key configured at `~/.ssh/t5n_api_server`.
+The script builds the image locally, saves it as a tarball, copies it via SCP, loads it on the remote host, and restarts the container. Requires Docker on the remote host and SSH key authentication. Copy `.server-config.example` to `.server-config` and fill in your server details before running.
 
 ---
 
@@ -549,7 +591,7 @@ The script builds the image locally, saves it as a tarball, copies it via SCP, l
 ```
 Web Form Server/
 ├── main.go               # HTTP server, route registration
-├── form_loader.go        # TOML parsing, validation, struct definitions
+├── form_loader.go        # JSON parsing, validation, struct definitions
 ├── renderer.go           # HTML rendering for all field types
 ├── submission.go         # Submission logging and JSON file output
 ├── config_handler.go     # /config route handlers
@@ -563,7 +605,7 @@ Web Form Server/
 │   ├── submitted.html    # Post-submission confirmation page
 │   └── config.html       # Visual config editor page
 ├── web-config/
-│   ├── example.form.toml # Demo form covering all field types
+│   ├── example.form.json # Demo form covering all field types
 │   └── example.form.css  # Default stylesheet
 └── data/
     └── submissions/      # Saved submission JSON files (volume-mounted)

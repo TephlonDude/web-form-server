@@ -1,0 +1,81 @@
+name: web-form-server
+services:
+  web-form-server:
+    image: tephlon/web-form-server:latest
+    container_name: web-form-server
+    ports:
+      - target: 5000
+        published: "8237"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: /DATA/AppData/web-form-server/web-config
+        target: /web-config
+      - type: bind
+        source: /DATA/AppData/web-form-server/submissions
+        target: /data/submissions
+    environment:
+      - FORM_FILE=/web-config/form.json
+      - CSS_FILE=/web-config/form.css
+      - PORT=5000
+      - SAVE_SUBMISSIONS=true
+      - SUBMISSIONS_DIR=/data/submissions
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    x-casaos:
+      envs:
+        - container: FORM_FILE
+          description:
+            en_us: Path to the JSON form definition file
+        - container: CSS_FILE
+          description:
+            en_us: Path to the CSS stylesheet file
+        - container: SAVE_SUBMISSIONS
+          description:
+            en_us: Write submission JSON files to disk (true/false)
+        - container: SUBMISSIONS_DIR
+          description:
+            en_us: Directory to store submission JSON files
+      ports:
+        - container: "5000"
+          description:
+            en_us: Web UI and form server
+      volumes:
+        - container: /web-config
+          description:
+            en_us: Form definition (form.json) and stylesheet (form.css)
+        - container: /data/submissions
+          description:
+            en_us: Persisted form submission JSON files
+
+x-casaos:
+  author: tephlon
+  category: Utilities
+  description:
+    en_us: >
+      A lightweight web form server that dynamically generates and serves HTML
+      forms from a JSON config file. Edit the form definition and CSS without
+      rebuilding — just update the files and reload. Includes a visual form
+      builder and JSON editor at /config.
+  developer: tephlon
+  icon: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/forms.png
+  index: /
+  main: web-form-server
+  port_map: "8237"
+  scheme: http
+  store_app_id: web-form-server
+  tagline:
+    en_us: JSON-configured web forms with zero code changes
+  title:
+    en_us: Web Form Server
+  tips:
+    before_install:
+      en_us: >
+        Place your form.json and form.css files in
+        /DATA/AppData/web-form-server/web-config/ before starting.
+        Example files are available at https://github.com/TephlonDude/web-form-server.
